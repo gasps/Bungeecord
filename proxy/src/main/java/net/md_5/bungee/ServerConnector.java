@@ -241,44 +241,29 @@ public class ServerConnector extends PacketHandler
 
             user.unsafe().sendPacket( modLogin );
 
-            if ( user.getPendingConnection().getVersion() < ProtocolConstants.MINECRAFT_1_8 )
+            if ( user.getDimension() != null )
             {
-                MinecraftOutput out = new MinecraftOutput();
-                out.writeStringUTF8WithoutLengthHeaderBecauseDinnerboneStuffedUpTheMCBrandPacket( ProxyServer.getInstance().getName() + " (" + ProxyServer.getInstance().getVersion() + ")" );
-                user.unsafe().sendPacket( new PluginMessage( "MC|Brand", out.toArray(), handshakeHandler.isServerForge() ) );
-            } else
-            {
-                if ( user.getDimension() != null )
+                user.getTabListHandler().onServerChange();
+
+                user.getServerSentScoreboard().clear();
+
+                for ( UUID bossbar : user.getSentBossBars() )
                 {
-                    user.getServer().setObsolete( true );
-                    user.getTabListHandler().onServerChange();
-
-                    user.getServerSentScoreboard().clear();
-
-                    for ( UUID bossbar : user.getSentBossBars() )
-                    {
-                        // Send remove bossbar packet
-                        user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.BossBar( bossbar, 1 ) );
-                    }
-                    user.getSentBossBars().clear();
-
-                    user.unsafe().sendPacket( new Respawn( login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), (byte) 0, login.getDeathLocation(),
-                            login.getPortalCooldown() ) );
-                    user.getServer().disconnect( "Quitting" );
-                } else
-                {
-                    user.unsafe().sendPacket( BungeeCord.getInstance().registerChannels( user.getPendingConnection().getVersion() ) );
-
-                    ByteBuf brand = ByteBufAllocator.DEFAULT.heapBuffer();
-                    DefinedPacket.writeString( bungee.getName() + " (" + bungee.getVersion() + ")", brand );
-                    user.unsafe().sendPacket( new PluginMessage( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_13 ? "minecraft:brand" : "MC|Brand", DefinedPacket.toArray( brand ), handshakeHandler != null && handshakeHandler.isServerForge() ) );
-                    brand.release();
+                    // Send remove bossbar packet
+                    user.unsafe().sendPacket( new net.md_5.bungee.protocol.packet.BossBar( bossbar, 1 ) );
                 }
-
                 user.getSentBossBars().clear();
 
                 user.unsafe().sendPacket( new Respawn( login.getDimension(), login.getWorldName(), login.getSeed(), login.getDifficulty(), login.getGameMode(), login.getPreviousGameMode(), login.getLevelType(), login.isDebug(), login.isFlat(), (byte) 0, login.getDeathLocation(),
                         login.getPortalCooldown() ) );
+            } else
+            {
+                user.unsafe().sendPacket( BungeeCord.getInstance().registerChannels( user.getPendingConnection().getVersion() ) );
+
+                ByteBuf brand = ByteBufAllocator.DEFAULT.heapBuffer();
+                DefinedPacket.writeString( bungee.getName() + " (" + bungee.getVersion() + ")", brand );
+                user.unsafe().sendPacket( new PluginMessage( user.getPendingConnection().getVersion() >= ProtocolConstants.MINECRAFT_1_13 ? "minecraft:brand" : "MC|Brand", DefinedPacket.toArray( brand ), handshakeHandler != null && handshakeHandler.isServerForge() ) );
+                brand.release();
             }
 
             user.setDimension( login.getDimension() );
